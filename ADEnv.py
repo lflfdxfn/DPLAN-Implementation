@@ -18,7 +18,6 @@ class ADEnv(gym.Env):
         """
         super().__init__()
 
-
         # hyperparameters:
         self.num_S=sampling_Du
         self.normal=label_normal
@@ -40,6 +39,7 @@ class ADEnv(gym.Env):
         self.action_space=spaces.Discrete(2)
 
         # initial state
+        self.count=0
         self.state=None
 
     def generater_a(self):
@@ -48,12 +48,12 @@ class ADEnv(gym.Env):
 
         return index
 
-    def generate_u(self,action,DQN):
+    def generate_u(self,action,s_t,DQN):
         # sampling function for D_u
         S=np.random.choice(self.index_u,self.num_S)
         # calculate distance in the space of last hidden layer of DQN
         dqn_s=DQN(self.x[S,:])
-        dqn_st=DQN(self.x[self.state])
+        dqn_st=DQN(self.x[s_t])
         dist=np.linalg.norm(dqn_s-dqn_st,axis=1)
 
         if action==1:
@@ -64,20 +64,42 @@ class ADEnv(gym.Env):
 
         return index
 
+    def reward_h(self,action,s_t):
+        # Anomaly-biased External Handcrafted Reward Function h
+        if (action==1) & (s_t in self.index_a):
+            return 1
+        elif (action==0) & (s_t in self.index_u):
+            return 0
+
+        return -1
+
     def step(self,action,DQN):
         # make sure action is legal
         assert self.action_space.contains(action), "Action {} (%s) is invalid".format(action,type(action))
 
+        # store former state
         s_t=self.state
         # choose generator
         g=np.random.choice(["g_a","g_u"])
         if g=="g_a":
             s_tp1=self.generater_a()
         elif g=="g_u":
-            s_tp1=self.generate_u(action,DQN)
+            s_tp1=self.generate_u(action,s_t,DQN)
 
+        # chnage to the next state
+        self.state=s_tp1
+        self.count+=1
 
+        # calculate the reward
+        reward=self.reward_h(action,s_t)
 
+        # done
+        done=True
+
+        # info
+        info={"State t":s_t, "Action t": action, "State t+1":s_tp1}
+
+        return self.state, reward, done, info
 
 # toy test
 if __name__=="__main__":
