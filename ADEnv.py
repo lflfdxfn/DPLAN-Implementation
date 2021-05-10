@@ -39,7 +39,7 @@ class ADEnv(gym.Env):
         self.action_space=spaces.Discrete(2)
 
         # initial state
-        self.count=0
+        self.count=None
         self.state=None
 
     def generater_a(self):
@@ -100,6 +100,14 @@ class ADEnv(gym.Env):
         info={"State t":s_t, "Action t": action, "State t+1":s_tp1}
 
         return self.state, reward, done, info
+
+    def reset(self):
+        # reset the status of environment
+        self.counts=0
+        # the first observation is uniformly sampled from the D_u
+        self.state=np.random.choice(self.index_u)
+
+        return self.state
 
 # toy test
 if __name__=="__main__":
