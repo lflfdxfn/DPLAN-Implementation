@@ -1,28 +1,87 @@
 import gym
+import numpy as np
+
 from gym import spaces
 
 class ADEnv(gym.Env):
     """
     Customized environment for anomaly detection
     """
-    def __init__(self,dataset,label_normal=0,label_anomaly=1):
+    def __init__(self,dataset,sampling_Du=1000,prob_au=0.5,label_normal=0,label_anomaly=1):
+        """
+        Initialize anomaly environment for DPLAN algorithm.
+        :param dataset: Input dataset in the form of 2-D array. The Last column is the label.
+        :param sampling_Du: Number of sampling on D_u for the generator g_u
+        :param prob_au: Probability of performing g_a.
+        :param label_normal: label of normal instances
+        :param label_anomaly: label of anomaly instances
+        """
         super().__init__()
 
-        # split the dataset into D_a and D_u
-        self.dataset=dataset
+
+        # hyperparameters:
+        self.num_S=sampling_Du
+        self.normal=label_normal
+        self.anomaly=label_anomaly
+        self.prob=prob_au
+
+        # Dataset infos: D_a and D_u
         m,n=dataset.shape
-        x=dataset[:,:n-1]
-        y=dataset[:,n-1]
-        self.dataset_u=x[:,y==label_normal]
-        self.dataset_a=x[:,y==label_anomaly]
+        self.x=dataset[:,:n-1]
+        self.y=dataset[:,n-1]
+        self.dataset=dataset
+        self.index_u=np.where(self.y==self.normal)[0]
+        self.index_a=np.where(self.y==self.anomaly)[0]
 
         # observation space:
-
+        self.observation_space=spaces.Discrete(m)
 
         # action space: 0 or 1
         self.action_space=spaces.Discrete(2)
 
-    def step(self,action):
+        # initial state
+        self.state=None
+
+    def generater_a(self):
+        # sampling function for D_a
+        index=np.random.choice(self.index_a)
+
+        return index
+
+    def generate_u(self,action,DQN):
+        # sampling function for D_u
+        S=np.random.choice(self.index_u,self.num_S)
+        # calculate distance in the space of last hidden layer of DQN
+        dqn_s=DQN(self.x[S,:])
+        dqn_st=DQN(self.x[self.state])
+        dist=np.linalg.norm(dqn_s-dqn_st,axis=1)
+
+        if action==1:
+            loc=np.argmin(dist)
+        elif action==0:
+            loc=np.argmax(dist)
+        index=S[loc]
+
+        return index
+
+    def step(self,action,DQN):
         # make sure action is legal
         assert self.action_space.contains(action), "Action {} (%s) is invalid".format(action,type(action))
 
+        s_t=self.state
+        # choose generator
+        g=np.random.choice(["g_a","g_u"])
+        if g=="g_a":
+            s_tp1=self.generater_a()
+        elif g=="g_u":
+            s_tp1=self.generate_u(action,DQN)
+
+
+
+
+# toy test
+if __name__=="__main__":
+    toyDataset=np.random.rand(5,3)
+    toyDataset[:,2]=np.random.choice([0,1],5)
+
+    env=ADEnv(toyDataset)
