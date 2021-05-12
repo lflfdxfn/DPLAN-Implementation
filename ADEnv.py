@@ -25,9 +25,9 @@ class ADEnv(gym.Env):
         self.prob=prob_au
 
         # Dataset infos: D_a and D_u
-        m,n=dataset.shape
-        self.x=dataset[:,:n-1]
-        self.y=dataset[:,n-1]
+        self.m,self.n=dataset.shape
+        self.x=dataset[:,:self.n-1]
+        self.y=dataset[:,self.n-1]
         self.dataset=dataset
         self.index_u=np.where(self.y==self.normal)[0]
         self.index_a=np.where(self.y==self.anomaly)[0]
