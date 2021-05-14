@@ -47,4 +47,4 @@ for data_f in data_folders:
 
         # run experiment
         for _ in range(runs):
-            env=ADEnv(undataset)
+            env=ADEnv.reset()
