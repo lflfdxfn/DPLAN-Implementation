@@ -1,4 +1,5 @@
 from rl.agents.dqn import DQNAgent
+from rl.memory import SequentialMemory
 from keras import regularizers
 from keras import backend
 from keras.models import Model
@@ -22,7 +23,8 @@ class DQN(Model):
         x=self.input(state)
         x=self.hidden(x)
 
-        return x
+        # output of penultilayer
+        return x.detach()
 
     def call(self,state):
         x=self.input(state)
@@ -73,5 +75,8 @@ def experiment(env: ADEnv,epoch=10,steps=2000,warm_up=10000,K=10000):
     # initialize two DQN model: Q-values and target Q-values
     Q_nn=DQN(n-1)
     Q_target=DQN_target(n-1)
+    # initialize agent's experiences
+    memory=SequentialMemory(limit=100000, window_length=1)
+    # set optimizer
+    optimizer=RMSprop(learning_rate=0.00025, clipnorm=1.,momentum=0.95)
 
-    optimizer=RMSprop(learning_rate=0.00025, clipnorm=1.)
