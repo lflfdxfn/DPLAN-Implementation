@@ -1,5 +1,5 @@
 # DPLAN-Implementation
-This is an implementation of the algorithm proposed in this paper: ["Deep Reinforcement Learning for Unknown Anomaly Detection"](https://arxiv.org/pdf/2009.06847.pdf). Please let me know if there are any bugs in my code. Thank you:)
+This is an implementation of the anomaly detecion algorithm proposed in this paper: ["Deep Reinforcement Learning for Unknown Anomaly Detection"](https://arxiv.org/pdf/2009.06847.pdf). Please let me know if there are any bugs in my code. Thank you:)
 ### Environment
 * python==3.7.9
 * tensorflow==2.3.1

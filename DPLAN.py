@@ -93,6 +93,9 @@ class DPLANProcessor(Processor):
         return reward_e+reward_i
 
 class DPLANCallbacks(Callback):
+    def on_action_begin(self, action, logs={}):
+        self.env.DQN=self.model
+
     def on_train_begin(self, logs=None):
         # calculate the intrinsic_reward from the initialized DQN
         self.model.processor.intrinsic_reward=DQN_iforest(self.env.x, self.model)

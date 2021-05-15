@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
-
+from DPLAN import DPLAN
 from ADEnv import ADEnv
 
 ### Basic Settings
@@ -9,11 +9,18 @@ from ADEnv import ADEnv
 data_path="/data/zhicao/UnknownAD"
 data_folders=["NB15_unknown1"]
 data_subsets={"NB15_unknown1":["Analysis","Backdoor","DoS","Exploits","Fuzzers","Generic","Reconnaissance"]}
+testdata_subset="test_for_all.csv" # test data is the same for subsets of the same class
 # scenario settings
 num_knowns=60
 contamination_rate=0.02
 # experiment settings
 runs=1
+
+### Anomaly Detection Environment Settings
+size_sampling_Du=1000
+prob_au=0.5
+label_normal=0
+label_anomaly=1
 
 ### DPLAN Settings
 settings={}
@@ -37,6 +44,10 @@ settings["target_update"]=10000 # K
 for data_f in data_folders:
     # different unknown datasets for each dataset
     subsets=data_subsets[data_f]
+    testdata_path=os.path.join(data_path,data_f,testdata_subset)
+    test_table=pd.read_csv(testdata_path)
+    test_dataset=test_table.values
+
     for subset in subsets:
         # location of unknwon datasets
         unknown_dataname="{}_{}_{}.csv".format(subset,contamination_rate,num_knowns)
@@ -47,4 +58,12 @@ for data_f in data_folders:
 
         # run experiment
         for _ in range(runs):
-            env=ADEnv.reset()
+            env=ADEnv(dataset=undataset,
+                      sampling_Du=size_sampling_Du,
+                      prob_au=prob_au,
+                      label_normal=label_normal,
+                      label_anomaly=label_anomaly)
+            roc,pr=DPLAN(env=env,settings=settings,testdata=test_dataset)
+
+            print(roc,pr)
+

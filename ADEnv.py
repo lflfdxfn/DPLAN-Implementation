@@ -41,6 +41,7 @@ class ADEnv(gym.Env):
         # initial state
         self.count=None
         self.state=None
+        self.DQN=None
 
     def generater_a(self):
         # sampling function for D_a
@@ -48,12 +49,12 @@ class ADEnv(gym.Env):
 
         return index
 
-    def generate_u(self,action,s_t,DQN):
+    def generate_u(self,action,s_t):
         # sampling function for D_u
         S=np.random.choice(self.index_u,self.num_S)
         # calculate distance in the space of last hidden layer of DQN
-        dqn_s=DQN(self.x[S,:])
-        dqn_st=DQN(self.x[s_t])
+        dqn_s=self.DQN(self.x[S,:])
+        dqn_st=self.DQN(self.x[s_t])
         dist=np.linalg.norm(dqn_s-dqn_st,axis=1)
 
         if action==1:
