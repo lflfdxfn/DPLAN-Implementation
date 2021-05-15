@@ -1,6 +1,7 @@
 import gym
 import numpy as np
 
+from utils import penulti_output
 from gym import spaces
 
 class ADEnv(gym.Env):
@@ -26,20 +27,22 @@ class ADEnv(gym.Env):
 
         # Dataset infos: D_a and D_u
         self.m,self.n=dataset.shape
-        self.x=dataset[:,:self.n-1]
-        self.y=dataset[:,self.n-1]
+        self.n_feature=self.n-1
+        self.n_samples=self.m
+        self.x=dataset[:,:self.n_feature]
+        self.y=dataset[:,self.n_feature]
         self.dataset=dataset
         self.index_u=np.where(self.y==self.normal)[0]
         self.index_a=np.where(self.y==self.anomaly)[0]
 
         # observation space:
-        self.observation_space=spaces.Discrete(m)
+        self.observation_space=spaces.Discrete(self.m)
 
         # action space: 0 or 1
         self.action_space=spaces.Discrete(2)
 
         # initial state
-        self.count=None
+        self.counts=None
         self.state=None
         self.DQN=None
 
@@ -53,8 +56,9 @@ class ADEnv(gym.Env):
         # sampling function for D_u
         S=np.random.choice(self.index_u,self.num_S)
         # calculate distance in the space of last hidden layer of DQN
-        dqn_s=self.DQN(self.x[S,:])
-        dqn_st=self.DQN(self.x[s_t])
+        latent_x=penulti_output(self.x,self.DQN)
+        dqn_s=latent_x[S,:]
+        dqn_st=latent_x[s_t]
         dist=np.linalg.norm(dqn_s-dqn_st,axis=1)
 
         if action==1:
@@ -74,7 +78,7 @@ class ADEnv(gym.Env):
 
         return -1
 
-    def step(self,action,DQN):
+    def step(self,action):
         # make sure action is legal
         assert self.action_space.contains(action), "Action {} (%s) is invalid".format(action,type(action))
 
@@ -85,11 +89,11 @@ class ADEnv(gym.Env):
         if g=="g_a":
             s_tp1=self.generater_a()
         elif g=="g_u":
-            s_tp1=self.generate_u(action,s_t,DQN)
+            s_tp1=self.generate_u(action,s_t)
 
         # chnage to the next state
         self.state=s_tp1
-        self.count+=1
+        self.counts+=1
 
         # calculate the reward
         reward=self.reward_h(action,s_t)

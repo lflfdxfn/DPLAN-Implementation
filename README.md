@@ -4,7 +4,7 @@ This is an implementation of the anomaly detecion algorithm proposed in this pap
 * python==3.7.9
 * tensorflow==2.3.1
 * keras==2.3.1
-* keras-rl==0.4.2
+* keras-rl2==1.0.5
 * pandas==1.1.5
 * gym==0.18.0
 ### Dataset

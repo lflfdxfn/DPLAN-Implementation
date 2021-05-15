@@ -5,52 +5,46 @@ from rl.agents.dqn import DQNAgent
 from rl.policy import EpsGreedyQPolicy, LinearAnnealedPolicy, GreedyQPolicy
 from rl.callbacks import Callback
 from keras import regularizers
+from keras import backend as K
 from keras.models import Model
-from keras.layers import Input, Dense
+from keras.layers import Input, Dense, Flatten
 from keras.optimizers import RMSprop
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.ensemble import IsolationForest
 from sklearn.metrics import roc_auc_score, average_precision_score
+from utils import penulti_output
 from ADEnv import ADEnv
 
 import numpy as np
 
+def QNetwork(input_shape,hidden_unit=20):
+    x_input=Input(shape=(1,input_shape))
+    x=Flatten(input_shape=(1,input_shape))(x_input)
+    x=Dense(hidden_unit,activation='relu',kernel_regularizer=regularizers.l2(0.01))(x)
+    x=Dense(2,activation='linear')(x)
 
-class QNetwork(Model):
-    """
-    Network architecture with one hidden layer.
-    """
-    def __init__(self,input_shape, hidden_unit=20):
-        super().__init__()
-        self.input=Input(shape=input_shape)
-        self.hidden=Dense(hidden_unit,activation="relu",kernel_regularizer=regularizers.l2(0.01))
-        self.output=Dense(2,activation="linear")
+    return Model(x_input, x)
 
-    def penulti_layer(self,state):
-        x=self.input(state)
-        x=self.hidden(x)
-
-        # output of penultilayer
-        return x
-
-    def call(self,state):
-        x=self.input(state)
-        x=self.hidden(x)
-        x=self.output(x)
-
-        return x
-
-def DQN_iforest(x, DQN: QNetwork):
+def DQN_iforest(x, model: Model):
     # iforest function on the penuli-layer space of DQN
-    latent_x=DQN.penulti_layer(x).detach()
+
+    # get the output of penulti-layer
+    latent_x=penulti_output(x,model)
     # calculate anomaly scores in the latent space
     iforest=IsolationForest().fit(latent_x)
     scores=iforest.score_samples(latent_x)
     # scaler scores to [0,1]
     scaler=MinMaxScaler()
-    norm_scaler=scaler.fit_transform(scores)
+    norm_scaler=scaler.fit_transform(scores.reshape(-1,1)).reshape(-1)
 
     return norm_scaler
+
+# class mDQNAgent(DQNAgent):
+#     """
+#     Fix the function compute_q_vaoues in DQNAgent to make the program runnable.
+#     Problem: the shape
+#     """
+#     def compute_q_values(self, state):
 
 
 class DPLANProcessor(Processor):
@@ -94,16 +88,16 @@ class DPLANProcessor(Processor):
 
 class DPLANCallbacks(Callback):
     def on_action_begin(self, action, logs={}):
-        self.env.DQN=self.model
+        self.env.DQN=self.model.model
 
     def on_train_begin(self, logs=None):
         # calculate the intrinsic_reward from the initialized DQN
-        self.model.processor.intrinsic_reward=DQN_iforest(self.env.x, self.model)
+        self.model.processor.intrinsic_reward=DQN_iforest(self.env.x, self.model.model)
 
     def on_episode_end(self, episode, logs={}):
         # on the end of episode, DPLAN needs to update the target DQN and the penulti-features
         # the update process of target DQN have implemented in "rl.agents.dqn.DQNAgent.backward()"
-        self.model.processor.intrinsic_reward=DQN_iforest(self.env.x, self.model)
+        self.model.processor.intrinsic_reward=DQN_iforest(self.env.x, self.model.model)
 
 
 def DPLAN(env: ADEnv, settings: dict, testdata: np.ndarray, *args, **kwargs):
@@ -134,7 +128,7 @@ def DPLAN(env: ADEnv, settings: dict, testdata: np.ndarray, *args, **kwargs):
     K=settings["target_update"]
 
     # initialize DQN Agent
-    input_shape=env.n
+    input_shape=env.n_feature
     n_actions=env.action_space.n
     model=QNetwork(input_shape=input_shape,
                    hidden_unit=l)
@@ -146,7 +140,7 @@ def DPLAN(env: ADEnv, settings: dict, testdata: np.ndarray, *args, **kwargs):
                                 nb_steps=greedy_course)
     memory=SequentialMemory(limit=M,
                             window_length=1)
-    processor=DPLANProcessor()
+    processor=DPLANProcessor(env)
     agent=DQNAgent(model=model,
                    policy=policy,
                    nb_actions=n_actions,
@@ -155,8 +149,7 @@ def DPLAN(env: ADEnv, settings: dict, testdata: np.ndarray, *args, **kwargs):
                    gamma=gamma,
                    batch_size=minibatch_size,
                    nb_steps_warmup=warmup_steps,
-                   target_model_update=K,
-                   )
+                   target_model_update=K)
     optimizer=RMSprop(learning_rate=lr, clipnorm=1.,momentum=grad_momentum)
     agent.compile(optimizer=optimizer)
     # initialize target DQN with weight=0
@@ -169,7 +162,7 @@ def DPLAN(env: ADEnv, settings: dict, testdata: np.ndarray, *args, **kwargs):
     callbacks=DPLANCallbacks()
     agent.fit(env=env,
               nb_steps=warmup_steps+n_episodes*n_steps_episode,
-              callbacks=callbacks,
+              callbacks=[callbacks],
               nb_max_episode_steps=n_steps_episode)
 
     # test DPLAN
