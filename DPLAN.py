@@ -10,8 +10,11 @@ from keras.layers import Input, Dense
 from keras.optimizers import RMSprop
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.ensemble import IsolationForest
-
+from sklearn.metrics import roc_auc_score, average_precision_score
 from ADEnv import ADEnv
+
+import numpy as np
+
 
 class QNetwork(Model):
     """
@@ -100,14 +103,14 @@ class DPLANCallbacks(Callback):
         self.model.processor.intrinsic_reward=DQN_iforest(self.env.x, self.model)
 
 
-def DPLAN(env: ADEnv, settings: dict, testdata, *args, **kwargs):
+def DPLAN(env: ADEnv, settings: dict, testdata: np.ndarray, *args, **kwargs):
     """
     1. Train a DPLAN model on anomaly-detection environment.
     2. Test it on the test dataset.
     3. Return the predictions.
     :param env: Environment of the anomaly detection.
     :param settings: Settings of hyperparameters in dict format.
-    :param testdata: Test dataset.
+    :param testdata: Test dataset ndarray. The last column contains the labels.
     :param n_run:
     """
     # hyperparameters
@@ -154,7 +157,10 @@ def DPLAN(env: ADEnv, settings: dict, testdata, *args, **kwargs):
     optimizer=RMSprop(learning_rate=lr, clipnorm=1.,momentum=grad_momentum)
     agent.compile(optimizer=optimizer)
     # initialize target DQN with weight=0
-
+    weights=agent.model.get_weights()
+    for weight in weights:
+        weight[:]=0
+    agent.target_model.set_weights(weights)
 
     # train DPLAN
     callbacks=DPLANCallbacks()
@@ -162,3 +168,12 @@ def DPLAN(env: ADEnv, settings: dict, testdata, *args, **kwargs):
               nb_steps=warmup_steps+n_episodes*n_steps_episode,
               callbacks=callbacks,
               nb_max_episode_steps=n_steps_episode)
+
+    # test DPLAN
+    x,y=testdata[:,:input_shape-1], testdata[:,input_shape-1]
+    q_vales=agent.model(x)
+    scores=np.argmax(q_values,axis=1)
+    roc=roc_auc_score(y,scores)
+    pr=average_precision_score(y,scores)
+
+    return roc, pr
