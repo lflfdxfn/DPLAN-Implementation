@@ -93,8 +93,8 @@ class ADEnv(gym.Env):
         # calculate the reward
         reward=self.reward_h(action,s_t)
 
-        # done
-        done=True
+        # done: whether terminal or not
+        done=False
 
         # info
         info={"State t":s_t, "Action t": action, "State t+1":s_tp1}
