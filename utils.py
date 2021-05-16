@@ -7,3 +7,4 @@ def penulti_output(x, DQN: Model):
     latent_x = penulti_func(x)[0]
 
     return latent_x
+
