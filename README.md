@@ -19,7 +19,8 @@ This is an implementation of the anomaly detecion algorithm proposed in this pap
 * Datasets are preprocessed in the same way that described in the original paper.
 * One raw dataset will generate a set of unknown anomaly detection dataset, according to different known anomaly classes in the training dataset.
   * For example, UNSW-NB15:
-    <!DOCTYPE html>
+  
+<!DOCTYPE html>
 <html lang="en">
    <head>
 	 <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/8.0.0/mermaid.min.js"></script>
@@ -27,11 +28,33 @@ This is an implementation of the anomaly detecion algorithm proposed in this pap
 	 
 <body>
  <pre><code class="language-mermaid">graph LR
-A--&gt;B
+start[UNSW-NB15]-->train[Train Dataset]
+start-->test[Test Dataset]
+train--Know Analysis-->Analysis[Analysis Unknown Dataset]
+train--Know Backdoor-->Backdoor[Backdoor Unknown Dataset]
+train--Know DoS-->DoS[DoS Unknown Dataset]
+train--Know Other-->...
+
 </code></pre>
 
 <div class="mermaid">graph LR
-A--&gt;B
+start[data_path]-->ds1[UNSW-NB15]
+start-->ds2[CoverType]
+start-->ds3[ThyroidDisease]
+start-->ds4[...]
+ds1-->Analysis
+ds1-->Backdoor
+ds1-->DoS
+ds1-->Exploits
+ds1-->...
+ds1-->t1[test dataset]
+ds2-->cottonwood
+ds2-->douglas-fir
+ds2-->t2[test dataset]
+ds3-->hypothyroid
+ds3-->subnormal
+ds3-->t3[test dataset]
+
 </div>
 	
 </body>
@@ -49,35 +72,7 @@ window.mermaid.init(undefined, document.querySelectorAll('.language-mermaid'));
 </script>
 
 </html>
-    ```mermaid
-    graph LR;
-    start[UNSW-NB15]-->train[Train Dataset]
-    start-->test[Test Dataset]
-    train--Know Analysis-->Analysis[Analysis Unknown Dataset]
-    train--Know Backdoor-->Backdoor[Backdoor Unknown Dataset]
-    train--Know DoS-->DoS[DoS Unknown Dataset]
-    train--Know Other-->...
-    ```
   * Accordingly, the paths of datasets are set in the following way to be loaded:
-    ```mermaid
-    graph LR;
-    start[data_path]-->ds1[UNSW-NB15]
-    start-->ds2[CoverType]
-    start-->ds3[ThyroidDisease]
-    start-->ds4[...]
-    ds1-->Analysis
-    ds1-->Backdoor
-    ds1-->DoS
-    ds1-->Exploits
-    ds1-->...
-    ds1-->t1[test dataset]
-    ds2-->cottonwood
-    ds2-->douglas-fir
-    ds2-->t2[test dataset]
-    ds3-->hypothyroid
-    ds3-->subnormal
-    ds3-->t3[test dataset]
-    ```
     
 ### Experiment
 * Set hyperparameters listed in the file `main.py`.
