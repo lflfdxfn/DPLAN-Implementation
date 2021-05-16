@@ -56,9 +56,12 @@ class ADEnv(gym.Env):
         # sampling function for D_u
         S=np.random.choice(self.index_u,self.num_S)
         # calculate distance in the space of last hidden layer of DQN
-        latent_x=penulti_output(self.x,self.DQN)
-        dqn_s=latent_x[S,:]
-        dqn_st=latent_x[s_t]
+        sample_x=self.x[S,:]
+        state_x=self.x[s_t]
+
+        dqn_s=penulti_output(sample_x,self.DQN)
+        dqn_st=penulti_output(state_x,self.DQN)
+
         dist=np.linalg.norm(dqn_s-dqn_st,axis=1)
 
         if action==1:

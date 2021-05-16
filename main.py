@@ -1,8 +1,10 @@
 import os
 import numpy as np
 import pandas as pd
+
 from DPLAN import DPLAN
 from ADEnv import ADEnv
+from utils import writeResults
 
 ### Basic Settings
 # data path settings
@@ -14,7 +16,9 @@ testdata_subset="test_for_all.csv" # test data is the same for subsets of the sa
 num_knowns=60
 contamination_rate=0.02
 # experiment settings
-runs=1
+runs=2
+result_path="./results"
+result_file="results.csv"
 
 ### Anomaly Detection Environment Settings
 size_sampling_Du=1000
@@ -56,14 +60,23 @@ for data_f in data_folders:
         table=pd.read_csv(undata_path)
         undataset=table.values
 
+        print()
+        rocs=[]
+        prs=[]
         # run experiment
-        for _ in range(runs):
+        for i in range(runs):
             env=ADEnv(dataset=undataset,
                       sampling_Du=size_sampling_Du,
                       prob_au=prob_au,
                       label_normal=label_normal,
                       label_anomaly=label_anomaly)
             roc,pr=DPLAN(env=env,settings=settings,testdata=test_dataset)
+            print("{} Run {}: AUC-ROC: {:.4f}, AUC-PR: {:.4f}".format(subset,i,roc,pr))
 
-            print(roc,pr)
+            rocs.append(roc)
+            prs.append(pr)
 
+        # write results
+        if not os.path.exists(result_path):
+            os.mkdir(result_path)
+        writeResults(name, rocs, prs, os.path.join(result_path,result_file))
