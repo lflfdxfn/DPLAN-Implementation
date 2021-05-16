@@ -16,7 +16,7 @@ testdata_subset="test_for_all.csv" # test data is the same for subsets of the sa
 num_knowns=60
 contamination_rate=0.02
 # experiment settings
-runs=2
+runs=10
 result_path="./results"
 result_file="results.csv"
 
