@@ -19,60 +19,12 @@ This is an implementation of the anomaly detecion algorithm proposed in this pap
 * Datasets are preprocessed in the same way that described in the original paper.
 * One raw dataset will generate a set of unknown anomaly detection dataset, according to different known anomaly classes in the training dataset.
   * For example, UNSW-NB15:
-  
-<!DOCTYPE html>
-<html lang="en">
-   <head>
-	 <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/8.0.0/mermaid.min.js"></script>
-    </head>
-	 
-<body>
- <pre><code class="language-mermaid">graph LR
-start[UNSW-NB15]-->train[Train Dataset]
-start-->test[Test Dataset]
-train--Know Analysis-->Analysis[Analysis Unknown Dataset]
-train--Know Backdoor-->Backdoor[Backdoor Unknown Dataset]
-train--Know DoS-->DoS[DoS Unknown Dataset]
-train--Know Other-->...
+    
+    [![](https://mermaid.ink/img/eyJjb2RlIjoiZ3JhcGggTFJcbiAgICBzdGFydFtVTlNXLU5CMTVdLS0-dHJhaW5bVHJhaW4gRGF0YXNldF1cbiAgICBzdGFydC0tPnRlc3RbVGVzdCBEYXRhc2V0XVxuICAgIHRyYWluLS1Lbm93IEFuYWx5c2lzLS0-QW5hbHlzaXNbQW5hbHlzaXMgVW5rbm93biBEYXRhc2V0XVxuICAgIHRyYWluLS1Lbm93IEJhY2tkb29yLS0-QmFja2Rvb3JbQmFja2Rvb3IgVW5rbm93biBEYXRhc2V0XVxuICAgIHRyYWluLS1Lbm93IERvUy0tPkRvU1tEb1MgVW5rbm93biBEYXRhc2V0XVxuICAgIHRyYWluLS1Lbm93IE90aGVyLS0-Li4uIiwibWVybWFpZCI6eyJ0aGVtZSI6ImRlZmF1bHQifSwidXBkYXRlRWRpdG9yIjpmYWxzZX0)](https://mermaid-js.github.io/mermaid-live-editor/#/edit/eyJjb2RlIjoiZ3JhcGggTFJcbiAgICBzdGFydFtVTlNXLU5CMTVdLS0-dHJhaW5bVHJhaW4gRGF0YXNldF1cbiAgICBzdGFydC0tPnRlc3RbVGVzdCBEYXRhc2V0XVxuICAgIHRyYWluLS1Lbm93IEFuYWx5c2lzLS0-QW5hbHlzaXNbQW5hbHlzaXMgVW5rbm93biBEYXRhc2V0XVxuICAgIHRyYWluLS1Lbm93IEJhY2tkb29yLS0-QmFja2Rvb3JbQmFja2Rvb3IgVW5rbm93biBEYXRhc2V0XVxuICAgIHRyYWluLS1Lbm93IERvUy0tPkRvU1tEb1MgVW5rbm93biBEYXRhc2V0XVxuICAgIHRyYWluLS1Lbm93IE90aGVyLS0-Li4uIiwibWVybWFpZCI6eyJ0aGVtZSI6ImRlZmF1bHQifSwidXBkYXRlRWRpdG9yIjpmYWxzZX0)
 
-</code></pre>
-
-<div class="mermaid">graph LR
-start[data_path]-->ds1[UNSW-NB15]
-start-->ds2[CoverType]
-start-->ds3[ThyroidDisease]
-start-->ds4[...]
-ds1-->Analysis
-ds1-->Backdoor
-ds1-->DoS
-ds1-->Exploits
-ds1-->...
-ds1-->t1[test dataset]
-ds2-->cottonwood
-ds2-->douglas-fir
-ds2-->t2[test dataset]
-ds3-->hypothyroid
-ds3-->subnormal
-ds3-->t3[test dataset]
-
-</div>
-	
-</body>
-<script>
-var config = {
-    startOnLoad:true,
-    theme: 'forest',
-    flowchart:{
-            useMaxWidth:false,
-            htmlLabels:true
-        }
-};
-mermaid.initialize(config);
-window.mermaid.init(undefined, document.querySelectorAll('.language-mermaid'));
-</script>
-
-</html>
   * Accordingly, the paths of datasets are set in the following way to be loaded:
+    
+ [![](https://mermaid.ink/img/eyJjb2RlIjoiZ3JhcGggVEQ7XG4gICAgc3RhcnRbZGF0YV9wYXRoXS0tPmRzMVtVTlNXLU5CMTVdXG4gICAgc3RhcnQtLT5kczJbQ292ZXJUeXBlXVxuICAgIHN0YXJ0LS0-ZHMzW1RoeXJvaWREaXNlYXNlXVxuICAgIHN0YXJ0LS0-ZHM0Wy4uLl1cbiAgICBkczEtLT5BbmFseXNpc1xuICAgIGRzMS0tPkJhY2tkb29yXG4gICAgZHMxLS0-RG9TXG4gICAgZHMxLS0-RXhwbG9pdHNcbiAgICBkczEtLT4uLi5cbiAgICBkczEtLT50MVt0ZXN0IGRhdGFzZXRdXG4gICAgZHMyLS0-Y290dG9ud29vZFxuICAgIGRzMi0tPmRvdWdsYXMtZmlyXG4gICAgZHMyLS0-dDJbdGVzdCBkYXRhc2V0XVxuICAgIGRzMy0tPmh5cG90aHlyb2lkXG4gICAgZHMzLS0-c3Vibm9ybWFsXG4gICAgZHMzLS0-dDNbdGVzdCBkYXRhc2V0XSIsIm1lcm1haWQiOnsidGhlbWUiOiJkZWZhdWx0In0sInVwZGF0ZUVkaXRvciI6ZmFsc2V9)](https://mermaid-js.github.io/mermaid-live-editor/#/edit/eyJjb2RlIjoiZ3JhcGggVEQ7XG4gICAgc3RhcnRbZGF0YV9wYXRoXS0tPmRzMVtVTlNXLU5CMTVdXG4gICAgc3RhcnQtLT5kczJbQ292ZXJUeXBlXVxuICAgIHN0YXJ0LS0-ZHMzW1RoeXJvaWREaXNlYXNlXVxuICAgIHN0YXJ0LS0-ZHM0Wy4uLl1cbiAgICBkczEtLT5BbmFseXNpc1xuICAgIGRzMS0tPkJhY2tkb29yXG4gICAgZHMxLS0-RG9TXG4gICAgZHMxLS0-RXhwbG9pdHNcbiAgICBkczEtLT4uLi5cbiAgICBkczEtLT50MVt0ZXN0IGRhdGFzZXRdXG4gICAgZHMyLS0-Y290dG9ud29vZFxuICAgIGRzMi0tPmRvdWdsYXMtZmlyXG4gICAgZHMyLS0-dDJbdGVzdCBkYXRhc2V0XVxuICAgIGRzMy0tPmh5cG90aHlyb2lkXG4gICAgZHMzLS0-c3Vibm9ybWFsXG4gICAgZHMzLS0-dDNbdGVzdCBkYXRhc2V0XSIsIm1lcm1haWQiOnsidGhlbWUiOiJkZWZhdWx0In0sInVwZGF0ZUVkaXRvciI6ZmFsc2V9) 
     
 ### Experiment
 * Set hyperparameters listed in the file `main.py`.
