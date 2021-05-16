@@ -1,21 +1,24 @@
+import tensorflow
+import numpy as np
+
 from rl.core import Processor
 from rl.util import clone_model
 from rl.memory import Memory, SequentialMemory
 from rl.agents.dqn import DQNAgent
 from rl.policy import EpsGreedyQPolicy, LinearAnnealedPolicy, GreedyQPolicy
 from rl.callbacks import Callback
-from keras import regularizers
-from keras import backend as K
-from keras.models import Model
-from keras.layers import Input, Dense, Flatten
-from keras.optimizers import RMSprop
+from tensorflow.keras import regularizers
+from tensorflow.keras import backend as K
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Dense, Flatten
+from tensorflow.keras.optimizers import RMSprop
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.ensemble import IsolationForest
 from sklearn.metrics import roc_auc_score, average_precision_score
+
 from utils import penulti_output
 from ADEnv import ADEnv
 
-import numpy as np
 
 def QNetwork(input_shape,hidden_unit=20):
     x_input=Input(shape=(1,input_shape))
@@ -38,14 +41,6 @@ def DQN_iforest(x, model: Model):
     norm_scaler=scaler.fit_transform(scores.reshape(-1,1)).reshape(-1)
 
     return norm_scaler
-
-# class mDQNAgent(DQNAgent):
-#     """
-#     Fix the function compute_q_vaoues in DQNAgent to make the program runnable.
-#     Problem: the shape
-#     """
-#     def compute_q_values(self, state):
-
 
 class DPLANProcessor(Processor):
     """
@@ -166,8 +161,8 @@ def DPLAN(env: ADEnv, settings: dict, testdata: np.ndarray, *args, **kwargs):
               nb_max_episode_steps=n_steps_episode)
 
     # test DPLAN
-    x,y=testdata[:,:input_shape-1], testdata[:,input_shape-1]
-    q_vales=agent.model(x)
+    x,y=testdata[:,:-1], testdata[:,-1]
+    q_values=agent.model.predict(x[:,np.newaxis,:])
     scores=np.argmax(q_values,axis=1)
     roc=roc_auc_score(y,scores)
     pr=average_precision_score(y,scores)

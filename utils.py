@@ -1,6 +1,5 @@
-from keras.models import Model
-import keras.backend as K
-
+from tensorflow.keras.models import Model
+import tensorflow.keras.backend as K
 
 def penulti_output(x, DQN: Model):
     inp = DQN.input
