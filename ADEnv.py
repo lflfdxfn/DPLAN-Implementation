@@ -116,10 +116,3 @@ class ADEnv(gym.Env):
         self.state=np.random.choice(self.index_u)
 
         return self.state
-
-# toy test
-if __name__=="__main__":
-    toyDataset=np.random.rand(5,3)
-    toyDataset[:,2]=np.random.choice([0,1],5)
-
-    env=ADEnv(toyDataset)

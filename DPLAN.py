@@ -35,7 +35,7 @@ def DQN_iforest(x, model: Model):
     latent_x=penulti_output(x,model)
     # calculate anomaly scores in the latent space
     iforest=IsolationForest().fit(latent_x)
-    scores=iforest.score_samples(latent_x)
+    scores=-iforest.score_samples(latent_x)
     # scaler scores to [0,1]
     scaler=MinMaxScaler()
     norm_scaler=scaler.fit_transform(scores.reshape(-1,1)).reshape(-1)
@@ -103,7 +103,6 @@ def DPLAN(env: ADEnv, settings: dict, testdata: np.ndarray, *args, **kwargs):
     :param env: Environment of the anomaly detection.
     :param settings: Settings of hyperparameters in dict format.
     :param testdata: Test dataset ndarray. The last column contains the labels.
-    :param n_run:
     """
     # hyperparameters
     l=settings["hidden_layer"]
@@ -145,7 +144,7 @@ def DPLAN(env: ADEnv, settings: dict, testdata: np.ndarray, *args, **kwargs):
                    batch_size=minibatch_size,
                    nb_steps_warmup=warmup_steps,
                    target_model_update=K)
-    optimizer=RMSprop(learning_rate=lr, clipnorm=1.,momentum=grad_momentum)
+    optimizer=RMSprop(learning_rate=lr, clipnorm=1.,momentum=grad_momentum,epsilon=min_grad)
     agent.compile(optimizer=optimizer)
     # initialize target DQN with weight=0
     weights=agent.model.get_weights()
