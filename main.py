@@ -16,7 +16,8 @@ testdata_subset="test_for_all.csv" # test data is the same for subsets of the sa
 num_knowns=60
 contamination_rate=0.02
 # experiment settings
-runs=10
+runs=1
+model_path="./model"
 result_path="./results"
 result_file="results.csv"
 
@@ -70,7 +71,12 @@ for data_f in data_folders:
                       prob_au=prob_au,
                       label_normal=label_normal,
                       label_anomaly=label_anomaly)
-            roc,pr=DPLAN(env=env,settings=settings,testdata=test_dataset)
+            roc,pr,agent=DPLAN(env=env,settings=settings,testdata=test_dataset)
+
+            # write weights
+            if not os.path.exists(model_path):
+                os.mkdir(model_path)
+            agent.model.save_weights("models/dqn_{}_{}.h5f".format(subset,i),overwrite=True)
             print("{} Run {}: AUC-ROC: {:.4f}, AUC-PR: {:.4f}".format(subset,i,roc,pr))
 
             rocs.append(roc)

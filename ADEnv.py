@@ -1,4 +1,5 @@
 import gym
+import time
 import numpy as np
 
 from utils import penulti_output
@@ -8,7 +9,7 @@ class ADEnv(gym.Env):
     """
     Customized environment for anomaly detection
     """
-    def __init__(self,dataset,sampling_Du=1000,prob_au=0.5,label_normal=0,label_anomaly=1):
+    def __init__(self,dataset: np.ndarray,sampling_Du=1000,prob_au=0.5,label_normal=0,label_anomaly=1):
         """
         Initialize anomaly environment for DPLAN algorithm.
         :param dataset: Input dataset in the form of 2-D array. The Last column is the label.
@@ -56,11 +57,11 @@ class ADEnv(gym.Env):
         # sampling function for D_u
         S=np.random.choice(self.index_u,self.num_S)
         # calculate distance in the space of last hidden layer of DQN
-        sample_x=self.x[S,:]
-        state_x=self.x[s_t]
+        all_x=self.x[np.append(S,s_t)]
 
-        dqn_s=penulti_output(sample_x,self.DQN)
-        dqn_st=penulti_output(state_x,self.DQN)
+        all_dqn_s=penulti_output(all_x,self.DQN)
+        dqn_s=all_dqn_s[:-1]
+        dqn_st=all_dqn_s[-1]
 
         dist=np.linalg.norm(dqn_s-dqn_st,axis=1)
 
@@ -82,6 +83,7 @@ class ADEnv(gym.Env):
         return -1
 
     def step(self,action):
+        start=time.time()
         # make sure action is legal
         assert self.action_space.contains(action), "Action {} (%s) is invalid".format(action,type(action))
 
@@ -106,6 +108,8 @@ class ADEnv(gym.Env):
 
         # info
         info={"State t":s_t, "Action t": action, "State t+1":s_tp1}
+
+
 
         return self.state, reward, done, info
 

@@ -22,9 +22,9 @@ from ADEnv import ADEnv
 
 def QNetwork(input_shape,hidden_unit=20):
     x_input=Input(shape=(1,input_shape))
-    x=Flatten(input_shape=(1,input_shape))(x_input)
-    x=Dense(hidden_unit,activation='relu',kernel_regularizer=regularizers.l2(0.01))(x)
-    x=Dense(2,activation='linear')(x)
+    flatten_x=Flatten(input_shape=(1,input_shape))(x_input)
+    latent_x=Dense(hidden_unit,activation='relu',kernel_regularizer=regularizers.l2(0.01))(flatten_x)
+    x=Dense(2,activation='linear')(latent_x)
 
     return Model(x_input, x)
 
@@ -166,4 +166,4 @@ def DPLAN(env: ADEnv, settings: dict, testdata: np.ndarray, *args, **kwargs):
     roc=roc_auc_score(y,scores)
     pr=average_precision_score(y,scores)
 
-    return roc, pr
+    return roc, pr, agent
