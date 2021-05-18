@@ -47,7 +47,7 @@ class ADEnv(gym.Env):
         self.state=None
         self.DQN=None
 
-    def generater_a(self):
+    def generater_a(self,**kwargs):
         # sampling function for D_a
         index=np.random.choice(self.index_a)
 
@@ -83,20 +83,13 @@ class ADEnv(gym.Env):
         return -1
 
     def step(self,action):
-        start=time.time()
-        # make sure action is legal
-        assert self.action_space.contains(action), "Action {} (%s) is invalid".format(action,type(action))
-
         # store former state
         s_t=self.state
         # choose generator
-        g=np.random.choice(["g_a","g_u"])
-        if g=="g_a":
-            s_tp1=self.generater_a()
-        elif g=="g_u":
-            s_tp1=self.generate_u(action,s_t)
+        g=np.random.choice([self.generater_a, self.generate_u])
+        s_tp1=g(action,s_t)
 
-        # chnage to the next state
+        # change to the next state
         self.state=s_tp1
         self.counts+=1
 
@@ -108,8 +101,6 @@ class ADEnv(gym.Env):
 
         # info
         info={"State t":s_t, "Action t": action, "State t+1":s_tp1}
-
-
 
         return self.state, reward, done, info
 

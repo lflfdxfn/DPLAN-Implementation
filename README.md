@@ -4,7 +4,6 @@ This is an implementation of the anomaly detecion algorithm proposed in this pap
 * cuda==11.0
 * cudnn==8.0
 * python==3.8.8
-* tensorflow==2.2.0
 * tensorflow-gpu==2.2.0
 * keras-rl2==1.0.5
 * pandas==1.2.4

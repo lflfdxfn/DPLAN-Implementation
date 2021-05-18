@@ -12,7 +12,6 @@ from tensorflow.keras import backend as K
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense, Flatten
 from tensorflow.keras.optimizers import RMSprop
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.ensemble import IsolationForest
 from sklearn.metrics import roc_auc_score, average_precision_score
 
@@ -37,10 +36,9 @@ def DQN_iforest(x, model: Model):
     iforest=IsolationForest().fit(latent_x)
     scores=-iforest.score_samples(latent_x)
     # scaler scores to [0,1]
-    scaler=MinMaxScaler()
-    norm_scaler=scaler.fit_transform(scores.reshape(-1,1)).reshape(-1)
+    norm_scores=(scores-scores.min())/(scores.max()-scores.min())
 
-    return norm_scaler
+    return norm_scores
 
 class DPLANProcessor(Processor):
     """

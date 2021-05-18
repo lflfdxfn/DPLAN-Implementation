@@ -66,18 +66,21 @@ for data_f in data_folders:
         prs=[]
         # run experiment
         for i in range(runs):
-            env=ADEnv(dataset=undataset,
-                      sampling_Du=size_sampling_Du,
-                      prob_au=prob_au,
-                      label_normal=label_normal,
-                      label_anomaly=label_anomaly)
-            roc,pr,agent=DPLAN(env=env,settings=settings,testdata=test_dataset)
-
-            # write weights
+            model_path=os.path.join(model_path,"dqn_{}_{}.h5f".format(subset,i))
             if not os.path.exists(model_path):
-                os.mkdir(model_path)
-            agent.model.save_weights("models/dqn_{}_{}.h5f".format(subset,i),overwrite=True)
-            print("{} Run {}: AUC-ROC: {:.4f}, AUC-PR: {:.4f}".format(subset,i,roc,pr))
+                # train model
+                env=ADEnv(dataset=undataset,
+                          sampling_Du=size_sampling_Du,
+                          prob_au=prob_au,
+                          label_normal=label_normal,
+                          label_anomaly=label_anomaly)
+                roc,pr,agent=DPLAN(env=env,settings=settings,testdata=test_dataset)
+
+                # write weights
+                if not os.path.exists(model_path):
+                    os.mkdir(model_path)
+                agent.model.save_weights(model_path,overwrite=True)
+                print("{} Run {}: AUC-ROC: {:.4f}, AUC-PR: {:.4f}".format(subset,i,roc,pr))
 
             rocs.append(roc)
             prs.append(pr)
@@ -85,4 +88,4 @@ for data_f in data_folders:
         # write results
         if not os.path.exists(result_path):
             os.mkdir(result_path)
-        writeResults(name, rocs, prs, os.path.join(result_path,result_file))
+        writeResults(subset, rocs, prs, os.path.join(result_path,result_file))
