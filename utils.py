@@ -20,8 +20,8 @@ def writeResults(name,rocs,prs,file_path):
     header=True
     if not os.path.exists(file_path):
         header=False
-    with open(file_path,'w') as f:
+    with open(file_path,'a') as f:
         if header==False:
-            f.write("{}, {}, {}".format("name", "AUC-ROC(mean/std)", "AUC-PR(mean/std)"))
+            f.write("{}, {}, {}".format("name", "AUC-ROC(mean/std)", "AUC-PR(mean/std)\n"))
 
-        f.write("{}, {}/{}, {}/{}".format(name, roc_mean, roc_std, pr_mean, pr_std))
+        f.write("{}, {}/{}, {}/{}\n".format(name, roc_mean, roc_std, pr_mean, pr_std))

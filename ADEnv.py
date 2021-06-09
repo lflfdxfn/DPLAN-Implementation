@@ -9,7 +9,7 @@ class ADEnv(gym.Env):
     """
     Customized environment for anomaly detection
     """
-    def __init__(self,dataset: np.ndarray,sampling_Du=1000,prob_au=0.5,label_normal=0,label_anomaly=1):
+    def __init__(self,dataset: np.ndarray,sampling_Du=1000,prob_au=0.5,label_normal=0,label_anomaly=1, name="default"):
         """
         Initialize anomaly environment for DPLAN algorithm.
         :param dataset: Input dataset in the form of 2-D array. The Last column is the label.
@@ -19,6 +19,7 @@ class ADEnv(gym.Env):
         :param label_anomaly: label of anomaly instances
         """
         super().__init__()
+        self.name=name
 
         # hyperparameters:
         self.num_S=sampling_Du
@@ -47,7 +48,7 @@ class ADEnv(gym.Env):
         self.state=None
         self.DQN=None
 
-    def generater_a(self,**kwargs):
+    def generater_a(self, *args, **kwargs):
         # sampling function for D_a
         index=np.random.choice(self.index_a)
 

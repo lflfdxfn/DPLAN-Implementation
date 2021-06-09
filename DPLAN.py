@@ -6,12 +6,12 @@ from rl.util import clone_model
 from rl.memory import Memory, SequentialMemory
 from rl.agents.dqn import DQNAgent
 from rl.policy import EpsGreedyQPolicy, LinearAnnealedPolicy, GreedyQPolicy
-from rl.callbacks import Callback
+from rl.callbacks import Callback, FileLogger, ModelIntervalCheckpoint
 from tensorflow.keras import regularizers
 from tensorflow.keras import backend as K
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense, Flatten
-from tensorflow.keras.optimizers import RMSprop
+from tensorflow.keras.optimizers import RMSprop, Adam
 from sklearn.ensemble import IsolationForest
 from sklearn.metrics import roc_auc_score, average_precision_score
 
@@ -93,7 +93,7 @@ class DPLANCallbacks(Callback):
         self.model.processor.intrinsic_reward=DQN_iforest(self.env.x, self.model.model)
 
 
-def DPLAN(env: ADEnv, settings: dict, testdata: np.ndarray, *args, **kwargs):
+def DPLAN(env: ADEnv, settings: dict, testdata: np.ndarray, model_name, mode="train", *args, **kwargs):
     """
     1. Train a DPLAN model on anomaly-detection environment.
     2. Test it on the test dataset.
@@ -101,6 +101,8 @@ def DPLAN(env: ADEnv, settings: dict, testdata: np.ndarray, *args, **kwargs):
     :param env: Environment of the anomaly detection.
     :param settings: Settings of hyperparameters in dict format.
     :param testdata: Test dataset ndarray. The last column contains the labels.
+    :param model_name: Name of trained model.
+    :param mode: Train or Test.
     """
     # hyperparameters
     l=settings["hidden_layer"]
@@ -141,8 +143,10 @@ def DPLAN(env: ADEnv, settings: dict, testdata: np.ndarray, *args, **kwargs):
                    gamma=gamma,
                    batch_size=minibatch_size,
                    nb_steps_warmup=warmup_steps,
+                   train_interval=1,#update frequency
                    target_model_update=K)
-    optimizer=RMSprop(learning_rate=lr, clipnorm=1.,momentum=grad_momentum,epsilon=min_grad)
+    # optimizer=RMSprop(learning_rate=lr, momentum=grad_momentum,epsilon=min_grad)
+    optimizer=Adam(learning_rate=lr, epsilon=min_grad)
     agent.compile(optimizer=optimizer)
     # initialize target DQN with weight=0
     weights=agent.model.get_weights()
@@ -150,18 +154,24 @@ def DPLAN(env: ADEnv, settings: dict, testdata: np.ndarray, *args, **kwargs):
         weight[:]=0
     agent.target_model.set_weights(weights)
 
-    # train DPLAN
-    callbacks=DPLANCallbacks()
-    agent.fit(env=env,
-              nb_steps=warmup_steps+n_episodes*n_steps_episode,
-              callbacks=[callbacks],
-              nb_max_episode_steps=n_steps_episode)
+    weights_filename = "{}_{}_weights.h5f".format(model_name,env.name)
+    if mode=="train":
+        # train DPLAN
+        callbacks=DPLANCallbacks()
+        agent.fit(env=env,
+                  nb_steps=warmup_steps+n_episodes*n_steps_episode,
+                  action_repetition=1,
+                  callbacks=[callbacks],
+                  nb_max_episode_steps=n_steps_episode)
+        agent.save_weights(weights_filename,overwrite=True)
+    elif mode=="test":
+        agent.load_weights(weights_filename)
+        # test DPLAN
+        x,y=testdata[:,:-1], testdata[:,-1]
+        q_values=agent.model.predict(x[:,np.newaxis,:])
+        scores=q_values[:,1]
+        # scores=np.argmax(q_values,axis=1)
+        roc=roc_auc_score(y,scores)
+        pr=average_precision_score(y,scores)
 
-    # test DPLAN
-    x,y=testdata[:,:-1], testdata[:,-1]
-    q_values=agent.model.predict(x[:,np.newaxis,:])
-    scores=np.argmax(q_values,axis=1)
-    roc=roc_auc_score(y,scores)
-    pr=average_precision_score(y,scores)
-
-    return roc, pr, agent
+        return roc, pr

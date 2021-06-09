@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 
 from DPLAN import DPLAN
 from ADEnv import ADEnv
@@ -20,6 +21,8 @@ runs=1
 model_path="./model"
 result_path="./results"
 result_file="results.csv"
+Train=True
+Test=True
 
 ### Anomaly Detection Environment Settings
 size_sampling_Du=1000
@@ -46,6 +49,10 @@ settings["penulti_update"]=2000 # N
 settings["target_update"]=10000 # K
 
 # different datasets
+if not os.path.exists(model_path):
+    os.mkdir(model_path)
+if not os.path.exists(result_path):
+    os.mkdir(result_path)
 for data_f in data_folders:
     # different unknown datasets for each dataset
     subsets=data_subsets[data_f]
@@ -54,8 +61,12 @@ for data_f in data_folders:
     test_dataset=test_table.values
 
     for subset in subsets:
+        np.random.seed(42)
+        tf.random.set_seed(42)
+        tf.compat.v1.reset_default_graph()
         # location of unknwon datasets
-        unknown_dataname="{}_{}_{}.csv".format(subset,contamination_rate,num_knowns)
+        data_name="{}_{}_{}".format(subset,contamination_rate,num_knowns)
+        unknown_dataname=data_name+".csv"
         undata_path=os.path.join(data_path,data_f,unknown_dataname)
         # get unknown dataset
         table=pd.read_csv(undata_path)
@@ -66,26 +77,33 @@ for data_f in data_folders:
         prs=[]
         # run experiment
         for i in range(runs):
-            model_path=os.path.join(model_path,"dqn_{}_{}.h5f".format(subset,i))
-            if not os.path.exists(model_path):
-                # train model
-                env=ADEnv(dataset=undataset,
-                          sampling_Du=size_sampling_Du,
-                          prob_au=prob_au,
-                          label_normal=label_normal,
-                          label_anomaly=label_anomaly)
-                roc,pr,agent=DPLAN(env=env,settings=settings,testdata=test_dataset)
+            model_name=os.path.join(model_path,"{}_{}".format(subset,i))
+            # train model
+            env=ADEnv(dataset=undataset,
+                      sampling_Du=size_sampling_Du,
+                      prob_au=prob_au,
+                      label_normal=label_normal,
+                      label_anomaly=label_anomaly,
+                      name=data_name)
+            if Train:
+                DPLAN(env=env,
+                      settings=settings,
+                      testdata=test_dataset,
+                      model_name=model_name,
+                      mode="train")
+            # test model
+            if Test:
+                roc,pr=DPLAN(env=env,
+                             settings=settings,
+                             testdata=test_dataset,
+                             model_name=model_name,
+                             mode="test")
 
-                # write weights
-                if not os.path.exists(model_path):
-                    os.mkdir(model_path)
-                agent.model.save_weights(model_path,overwrite=True)
                 print("{} Run {}: AUC-ROC: {:.4f}, AUC-PR: {:.4f}".format(subset,i,roc,pr))
 
-            rocs.append(roc)
-            prs.append(pr)
+                rocs.append(roc)
+                prs.append(pr)
 
-        # write results
-        if not os.path.exists(result_path):
-            os.mkdir(result_path)
-        writeResults(subset, rocs, prs, os.path.join(result_path,result_file))
+        if Test:
+            # write results
+            writeResults(subset, rocs, prs, os.path.join(result_path,result_file))
