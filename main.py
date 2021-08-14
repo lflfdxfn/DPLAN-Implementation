@@ -1,15 +1,19 @@
 import os
+import time
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+tf.device("/cpu:0")
 
 from DPLAN import DPLAN
 from ADEnv import ADEnv
 from utils import writeResults
+from sklearn.metrics import roc_auc_score, average_precision_score
 
 ### Basic Settings
 # data path settings
-data_path="/data/zhicao/UnknownAD"
+# data_path="/data/zhicao/UnknownAD"
+data_path="D:\\Datasets\\UAD"
 data_folders=["NB15_unknown1"]
 data_subsets={"NB15_unknown1":["Analysis","Backdoor","DoS","Exploits","Fuzzers","Generic","Reconnaissance"]}
 testdata_subset="test_for_all.csv" # test data is the same for subsets of the same class
@@ -17,7 +21,7 @@ testdata_subset="test_for_all.csv" # test data is the same for subsets of the sa
 num_knowns=60
 contamination_rate=0.02
 # experiment settings
-runs=1
+runs=10
 model_path="./model"
 result_path="./results"
 result_file="results.csv"
@@ -63,7 +67,6 @@ for data_f in data_folders:
     for subset in subsets:
         np.random.seed(42)
         tf.random.set_seed(42)
-        tf.compat.v1.reset_default_graph()
         # location of unknwon datasets
         data_name="{}_{}_{}".format(subset,contamination_rate,num_knowns)
         unknown_dataname=data_name+".csv"
@@ -75,35 +78,63 @@ for data_f in data_folders:
         print()
         rocs=[]
         prs=[]
+        train_times=[]
+        test_times=[]
         # run experiment
         for i in range(runs):
-            model_name=os.path.join(model_path,"{}_{}".format(subset,i))
-            # train model
+            print("#######################################################################")
+            print("Dataset: {}".format(subset))
+            print("Run: {}".format(i))
+
+            weights_file=os.path.join(model_path,"{}_{}_{}_weights.h4f".format(subset,i,data_name))
+            # initialize environment and agent
+            tf.compat.v1.reset_default_graph()
             env=ADEnv(dataset=undataset,
                       sampling_Du=size_sampling_Du,
                       prob_au=prob_au,
                       label_normal=label_normal,
                       label_anomaly=label_anomaly,
                       name=data_name)
-            if Train:
-                DPLAN(env=env,
-                      settings=settings,
-                      testdata=test_dataset,
-                      model_name=model_name,
-                      mode="train")
-            # test model
-            if Test:
-                roc,pr=DPLAN(env=env,
-                             settings=settings,
-                             testdata=test_dataset,
-                             model_name=model_name,
-                             mode="test")
+            model=DPLAN(env=env,
+                        settings=settings)
 
-                print("{} Run {}: AUC-ROC: {:.4f}, AUC-PR: {:.4f}".format(subset,i,roc,pr))
+            # train the agent
+            train_time=0
+            if Train:
+                # train DPLAN
+                train_start=time.time()
+                model.fit(weights_file=weights_file)
+                train_end=time.time()
+                train_time=train_end-train_start
+                print("Train time: {}/s".format(train_time))
+
+            # test the agent
+            test_time=0
+            if Test:
+                test_X, test_y=test_dataset[:,:-1], test_dataset[:,-1]
+                model.load_weights(weights_file)
+                # test DPLAN
+                test_start=time.time()
+                pred_y=model.predict(test_X)
+                test_end=time.time()
+                test_time=test_end-test_start
+                print("Test time: {}/s".format(test_time))
+
+                roc = roc_auc_score(test_y, pred_y)
+                pr = average_precision_score(test_y, pred_y)
+                print("{} Run {}: AUC-ROC: {:.4f}, AUC-PR: {:.4f}, train_time: {:.2f}, test_time: {:.2f}".format(subset,
+                                                                                                                 i,
+                                                                                                                 roc,
+                                                                                                                 pr,
+                                                                                                                 train_time,
+                                                                                                                 test_time))
 
                 rocs.append(roc)
                 prs.append(pr)
+                train_times.append(train_time)
+                test_times.append(test_time)
+
 
         if Test:
             # write results
-            writeResults(subset, rocs, prs, os.path.join(result_path,result_file))
+            writeResults(subset, rocs, prs, train_times, test_times, os.path.join(result_path,result_file))

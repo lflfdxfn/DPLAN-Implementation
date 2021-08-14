@@ -4,6 +4,7 @@
 
 # User-specific stuff
 results/**
+model/**
 note.md
 .idea
 .idea/**/workspace.xml

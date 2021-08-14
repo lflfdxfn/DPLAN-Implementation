@@ -1,22 +1,127 @@
-import tensorflow
 import numpy as np
-
-from rl.core import Processor
-from rl.util import clone_model
-from rl.memory import Memory, SequentialMemory
 from rl.agents.dqn import DQNAgent
-from rl.policy import EpsGreedyQPolicy, LinearAnnealedPolicy, GreedyQPolicy
-from rl.callbacks import Callback, FileLogger, ModelIntervalCheckpoint
-from tensorflow.keras import regularizers
-from tensorflow.keras import backend as K
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Dense, Flatten
-from tensorflow.keras.optimizers import RMSprop, Adam
+from rl.callbacks import Callback
+from rl.core import Processor
+from rl.memory import SequentialMemory
+from rl.policy import EpsGreedyQPolicy, LinearAnnealedPolicy
 from sklearn.ensemble import IsolationForest
-from sklearn.metrics import roc_auc_score, average_precision_score
+from tensorflow.keras import backend as K
+from tensorflow.keras import regularizers
+from tensorflow.keras.layers import Input, Dense, Flatten
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import RMSprop
 
-from utils import penulti_output
 from ADEnv import ADEnv
+from utils import penulti_output
+
+
+class DPLAN:
+    """
+    DPLAN model.
+    """
+    def __init__(self, env: ADEnv, settings: dict):
+        """
+        Initialize a DPLAN model.
+        :param env: Environment of the anomaly detection.
+        :param settings: Settings of hyperparameters in dict format.
+        """
+        # basic properties
+        self.env=env
+        self.train_env=None
+        self.settings=settings
+
+        # hyperparameters
+        self.l = settings["hidden_layer"]
+        self.M = settings["memory_size"]
+        self.warmup_steps = settings["warmup_steps"]
+        self.n_episodes = settings["episodes"]
+        self.n_steps_episode = settings["steps_per_episode"]
+        self.max_epsilon = settings["epsilon_max"]
+        self.min_epsilon = settings["epsilon_min"]
+        self.greedy_course = settings["epsilon_course"]
+        self.minibatch_size = settings["minibatch_size"]
+        self.gamma = settings["discount_factor"]
+        self.lr = settings["learning_rate"]
+        self.min_grad = settings["minsquared_gradient"]
+        self.grad_momentum = settings["gradient_momentum"]
+        # hyper-parameter not used, penulti-output is updated at the end of each episode.
+        self.N = settings["penulti_update"]
+        self.K = settings["target_update"]
+
+        # initialize an DQN Agent
+        input_shape = env.n_feature
+        n_actions = env.action_space.n
+        model = QNetwork(input_shape=input_shape,
+                         hidden_unit=self.l)
+        policy = LinearAnnealedPolicy(inner_policy=EpsGreedyQPolicy(),
+                                      attr='eps',
+                                      value_max=self.max_epsilon,
+                                      value_min=self.min_epsilon,
+                                      value_test=0.,
+                                      nb_steps=self.greedy_course)
+        memory = SequentialMemory(limit=self.M,
+                                  window_length=1)
+        processor = DPLANProcessor(env)
+        optimizer = RMSprop(learning_rate=self.lr,
+                            momentum=self.grad_momentum,
+                            epsilon=self.min_grad)
+
+        agent = DQNAgent(model=model,
+                         policy=policy,
+                         nb_actions=n_actions,
+                         memory=memory,
+                         processor=processor,
+                         gamma=self.gamma,
+                         batch_size=self.minibatch_size,
+                         nb_steps_warmup=self.warmup_steps,
+                         train_interval=1,  # update frequency
+                         target_model_update=self.K)
+        agent.compile(optimizer=optimizer)
+        # initialize target DQN with weight=0
+        weights = agent.model.get_weights()
+        for weight in weights:
+            weight[:] = 0
+        agent.target_model.set_weights(weights)
+
+        self.agent=agent
+
+    def fit(self, env: ADEnv=None, weights_file=None):
+        # Check whether a new env is used.
+        if env:
+            self.train_env=env
+        else:
+            self.train_env=self.env
+
+        # Train DPLAN.
+        callbacks = DPLANCallbacks()
+        self.agent.fit(env=self.train_env,
+                       nb_steps=self.warmup_steps + self.n_episodes * self.n_steps_episode,
+                       action_repetition=1,
+                       callbacks=[callbacks],
+                       nb_max_episode_steps=self.n_steps_episode)
+        # Save weights if the weights_filename is given.
+        if weights_file:
+            self.agent.save_weights(weights_file, overwrite=True)
+
+    def load_weights(self,weights_file):
+        # Load weights to the DQN agent from a stored file.
+        self.agent.load_weights(weights_file)
+
+    def predict(self, X):
+        # Predict current DQN agent on the test dataset.
+        # Return the predicted anomaly score.
+        q_values=self.agent.model.predict(X[:,np.newaxis,:])
+        scores=q_values[:,1]
+
+        return scores
+
+    def predict_label(self, X):
+        # Predict current DQN agent on the test dataset.
+        # Return the predicted labels.
+        q_values=self.agent.model.predict(X[:,np.newaxis,:])
+        labels=np.argmax(q_values,axis=1)
+
+        return labels
 
 
 def QNetwork(input_shape,hidden_unit=20):
@@ -91,87 +196,3 @@ class DPLANCallbacks(Callback):
         # on the end of episode, DPLAN needs to update the target DQN and the penulti-features
         # the update process of target DQN have implemented in "rl.agents.dqn.DQNAgent.backward()"
         self.model.processor.intrinsic_reward=DQN_iforest(self.env.x, self.model.model)
-
-
-def DPLAN(env: ADEnv, settings: dict, testdata: np.ndarray, model_name, mode="train", *args, **kwargs):
-    """
-    1. Train a DPLAN model on anomaly-detection environment.
-    2. Test it on the test dataset.
-    3. Return the predictions.
-    :param env: Environment of the anomaly detection.
-    :param settings: Settings of hyperparameters in dict format.
-    :param testdata: Test dataset ndarray. The last column contains the labels.
-    :param model_name: Name of trained model.
-    :param mode: Train or Test.
-    """
-    # hyperparameters
-    l=settings["hidden_layer"]
-    M=settings["memory_size"]
-    warmup_steps=settings["warmup_steps"]
-    n_episodes=settings["episodes"]
-    n_steps_episode=settings["steps_per_episode"]
-    max_epsilon=settings["epsilon_max"]
-    min_epsilon=settings["epsilon_min"]
-    greedy_course=settings["epsilon_course"]
-    minibatch_size=settings["minibatch_size"]
-    gamma=settings["discount_factor"]
-    lr=settings["learning_rate"]
-    min_grad=settings["minsquared_gradient"]
-    grad_momentum=settings["gradient_momentum"]
-    N=settings["penulti_update"] # hyper-parameter not used
-    K=settings["target_update"]
-
-    # initialize DQN Agent
-    input_shape=env.n_feature
-    n_actions=env.action_space.n
-    model=QNetwork(input_shape=input_shape,
-                   hidden_unit=l)
-    policy=LinearAnnealedPolicy(inner_policy=EpsGreedyQPolicy(),
-                                attr='eps',
-                                value_max=max_epsilon,
-                                value_min=min_epsilon,
-                                value_test=0.,
-                                nb_steps=greedy_course)
-    memory=SequentialMemory(limit=M,
-                            window_length=1)
-    processor=DPLANProcessor(env)
-    agent=DQNAgent(model=model,
-                   policy=policy,
-                   nb_actions=n_actions,
-                   memory=memory,
-                   processor=processor,
-                   gamma=gamma,
-                   batch_size=minibatch_size,
-                   nb_steps_warmup=warmup_steps,
-                   train_interval=1,#update frequency
-                   target_model_update=K)
-    # optimizer=RMSprop(learning_rate=lr, momentum=grad_momentum,epsilon=min_grad)
-    optimizer=Adam(learning_rate=lr, epsilon=min_grad)
-    agent.compile(optimizer=optimizer)
-    # initialize target DQN with weight=0
-    weights=agent.model.get_weights()
-    for weight in weights:
-        weight[:]=0
-    agent.target_model.set_weights(weights)
-
-    weights_filename = "{}_{}_weights.h5f".format(model_name,env.name)
-    if mode=="train":
-        # train DPLAN
-        callbacks=DPLANCallbacks()
-        agent.fit(env=env,
-                  nb_steps=warmup_steps+n_episodes*n_steps_episode,
-                  action_repetition=1,
-                  callbacks=[callbacks],
-                  nb_max_episode_steps=n_steps_episode)
-        agent.save_weights(weights_filename,overwrite=True)
-    elif mode=="test":
-        agent.load_weights(weights_filename)
-        # test DPLAN
-        x,y=testdata[:,:-1], testdata[:,-1]
-        q_values=agent.model.predict(x[:,np.newaxis,:])
-        scores=q_values[:,1]
-        # scores=np.argmax(q_values,axis=1)
-        roc=roc_auc_score(y,scores)
-        pr=average_precision_score(y,scores)
-
-        return roc, pr
