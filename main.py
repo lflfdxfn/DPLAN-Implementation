@@ -12,10 +12,10 @@ from sklearn.metrics import roc_auc_score, average_precision_score
 
 ### Basic Settings
 # data path settings
-# data_path="/data/zhicao/UnknownAD"
 data_path="D:\\Datasets\\UAD"
 data_folders=["NB15_unknown1"]
-data_subsets={"NB15_unknown1":["Analysis","Backdoor","DoS","Exploits","Fuzzers","Generic","Reconnaissance"]}
+# data_subsets={"NB15_unknown1":["Analysis","Backdoor","DoS","Exploits","Fuzzers","Generic","Reconnaissance"]}
+data_subsets={"NB15_unknown1":["Fuzzers","Generic","Reconnaissance"]}
 testdata_subset="test_for_all.csv" # test data is the same for subsets of the same class
 # scenario settings
 num_knowns=60
@@ -133,7 +133,6 @@ for data_f in data_folders:
                 prs.append(pr)
                 train_times.append(train_time)
                 test_times.append(test_time)
-
 
         if Test:
             # write results

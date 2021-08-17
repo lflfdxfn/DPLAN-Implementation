@@ -26,7 +26,7 @@ def writeResults(name,rocs,prs,train_times, test_times, file_path):
 
     with open(file_path,'a') as f:
         if not header:
-            f.write("{}, {}, {}".format("Name",
+            f.write("{}, {}, {}, {}, {}\n".format("Name",
                                         "AUC-ROC(mean/std)",
                                         "AUC-PR(mean/std)",
                                         "Train time/s",
