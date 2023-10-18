@@ -24,6 +24,8 @@ This is an implementation of the anomaly detecion algorithm proposed in this pap
   * Accordingly, the paths of datasets to be loaded are set in the following way:
     
 [![](https://mermaid.ink/img/eyJjb2RlIjoiZ3JhcGggVEQ7XG4gICAgc3RhcnRbZGF0YV9wYXRoXS0tPmRzMVtVTlNXLU5CMTVdXG4gICAgc3RhcnQtLT5kczJbQ292ZXJUeXBlXVxuICAgIHN0YXJ0LS0-ZHM0Wy4uLl1cbiAgICBkczEtLT5BbmFseXNpc1xuICAgIGRzMS0tPkJhY2tkb29yXG4gICAgZHMxLS0-Li4uXG4gICAgZHMxLS0-dDFbdGVzdCBkYXRhc2V0XVxuICAgIGRzMi0tPmNvdHRvbndvb2RcbiAgICBkczItLT5kb3VnbGFzLWZpclxuICAgIGRzMi0tPnQyW3Rlc3QgZGF0YXNldF0iLCJtZXJtYWlkIjp7InRoZW1lIjoiZGVmYXVsdCJ9LCJ1cGRhdGVFZGl0b3IiOmZhbHNlfQ)](https://mermaid-js.github.io/mermaid-live-editor/#/edit/eyJjb2RlIjoiZ3JhcGggVEQ7XG4gICAgc3RhcnRbZGF0YV9wYXRoXS0tPmRzMVtVTlNXLU5CMTVdXG4gICAgc3RhcnQtLT5kczJbQ292ZXJUeXBlXVxuICAgIHN0YXJ0LS0-ZHM0Wy4uLl1cbiAgICBkczEtLT5BbmFseXNpc1xuICAgIGRzMS0tPkJhY2tkb29yXG4gICAgZHMxLS0-Li4uXG4gICAgZHMxLS0-dDFbdGVzdCBkYXRhc2V0XVxuICAgIGRzMi0tPmNvdHRvbndvb2RcbiAgICBkczItLT5kb3VnbGFzLWZpclxuICAgIGRzMi0tPnQyW3Rlc3QgZGF0YXNldF0iLCJtZXJtYWlkIjp7InRoZW1lIjoiZGVmYXVsdCJ9LCJ1cGRhdGVFZGl0b3IiOmZhbHNlfQ)
+
+* Fortunately, I have found the data preprocessing files in my old PC. Download from this [link](https://drive.google.com/file/d/1Gtv5P1paAOEUT6Ms1bzendh5Q2Jevd4E/view?usp=share_link) and unzip files into the "UAD" directory.
     
 ## Experiment
 * Set hyperparameters listed in the file `main.py`.

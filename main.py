@@ -12,7 +12,7 @@ from sklearn.metrics import roc_auc_score, average_precision_score
 
 ### Basic Settings
 # data path settings
-data_path="D:\\Datasets\\UAD"
+data_path=".\\UAD"
 data_folders=["NB15_unknown1"]
 # data_subsets={"NB15_unknown1":["Analysis","Backdoor","DoS","Exploits","Fuzzers","Generic","Reconnaissance"]}
 data_subsets={"NB15_unknown1":["Fuzzers","Generic","Reconnaissance"]}
