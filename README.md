@@ -1,5 +1,5 @@
 # DPLAN-Implementation
-This is an implementation of the anomaly detecion algorithm proposed in this paper: ["Deep Reinforcement Learning for Unknown Anomaly Detection"](https://arxiv.org/pdf/2009.06847.pdf). Please let me know if there are any bugs in my code. Thank you:)
+This is an inofficial implementation of the anomaly detecion algorithm proposed in these papers: [Toward Deep Supervised Anomaly Detection: Reinforcement Learning from Partially Labeled Anomaly Data](https://dl.acm.org/doi/abs/10.1145/3447548.3467417) and ["Deep Reinforcement Learning for Unknown Anomaly Detection"](https://arxiv.org/pdf/2009.06847.pdf). Please let me know if there are any bugs in my code. Thank you:)
 ## Environment
 * cuda==11.0
 * cudnn==8.0
